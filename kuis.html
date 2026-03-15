@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kuis TA3206</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+  :root {
+    --bg:           #f0f4f8;
+    --surface:      #ffffff;
+    --surface2:     #f8fafc;
+    --border:       #e2e8f0;
+    --border2:      #cbd5e1;
+    --blue:         #2563eb;
+    --blue-light:   #eff6ff;
+    --blue-mid:     #bfdbfe;
+    --green:        #059669;
+    --green-light:  #ecfdf5;
+    --green-mid:    #a7f3d0;
+    --red:          #dc2626;
+    --red-light:    #fef2f2;
+    --yellow:       #d97706;
+    --yellow-light: #fffbeb;
+    --text:         #1e293b;
+    --text-muted:   #64748b;
+    --text-dim:     #94a3b8;
+    --sans:         'Plus Jakarta Sans', sans-serif;
+    --mono:         'JetBrains Mono', monospace;
+    --radius:       10px;
+    --radius-lg:    14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* semua layar tersembunyi kecuali yang aktif */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ─────────────────────────────────────
+     SCREEN: LOADING (saat ambil soal)
+  ───────────────────────────────────── */
+  #screen-loading {
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+
+  .loading-wrap { text-align: center; }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-wrap p { font-size: 0.85rem; color: var(--text-muted); }
+
+  /* ─────────────────────────────────────
+     SCREEN: ERROR (kuis tidak ditemukan)
+  ───────────────────────────────────── */
+  #screen-error {
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 2rem;
+  }
+
+  .error-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .error-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .error-card h2 { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .error-card p  { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+
+  /* ─────────────────────────────────────
+     SCREEN: START
+  ───────────────────────────────────── */
+  #screen-start {
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .start-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    max-width: 560px;
+    width: 100%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+  }
+
+  .quiz-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .brand-badge {
+    background: var(--blue);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 5px;
+    letter-spacing: 0.04em;
+  }
+
+  .brand-name {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .start-card h1 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.4rem;
+  }
+
+  .start-card .subtitle {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  /* Info grid */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .info-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+  }
+
+  .info-item .ii-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 3px;
+  }
+
+  .info-item .ii-val {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Riwayat percobaan NIM */
+  .history-notice {
+    border-radius: var(--radius);
+    padding: 0.8rem 1rem;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .history-notice.warn {
+    background: var(--yellow-light);
+    border: 1px solid #fde68a;
+    color: #92400e;
+    display: block;
+  }
+
+  .history-notice.full {
+    background: var(--red-light);
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    display: block;
+  }
+
+  .history-notice.fresh {
+    background: var(--green-light);
+    border: 1px solid var(--green-mid);
+    color: #065f46;
+    display: block;
+  }
+
+  /* Rules box */
+  .rules-box {
+    background: var(--blue-light);
+    border: 1px solid var(--blue-mid);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.8rem;
+    color: #1e40af;
+    line-height: 1.7;
+  }
+
+  .rules-box strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.82rem;
+  }
+
+  /* Form */
+  .field { margin-bottom: 0.85rem; }
+
+  .field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 5px;
+  }
+
+  .text-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.9rem;
+    font-size: 0.9rem;
+    color: var(--text);
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .text-input:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+
+  .text-input.err  { border-color: var(--red); }
+  .text-input::placeholder { color: var(--text-dim); }
+
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Buttons */
+  .btn-primary {
+    width: 100%;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+
+  .btn-primary:hover   { background: #1d4ed8; }
+  .btn-primary:active  { transform: scale(0.985); }
+  .btn-primary:disabled { background: var(--text-dim); cursor: not-allowed; }
+
+  /* ─────────────────────────────────────
+     SCREEN: FULLSCREEN PROMPT
+  ───────────────────────────────────── */
+  #screen-fullscreen {
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 2rem;
+  }
+
+  .fs-card {
+    background: var(--surface);
+    border: 1px solid #fde68a;
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(217,119,6,0.08);
+  }
+
+  .fs-icon  { font-size: 2.5rem; margin-bottom: 1rem; }
+  .fs-card h2 { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .fs-card p  { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.6; }
+
+  /* ─────────────────────────────────────
+     SCREEN: QUIZ
+  ───────────────────────────────────── */
+  #screen-quiz { background: var(--bg); }
+
+  /* Header sticky */
+  .quiz-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0.65rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  .qh-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .qh-nim {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 5px;
+  }
+
+  .qh-attempt {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--blue-light);
+    color: var(--blue);
+    border: 1px solid var(--blue-mid);
+  }
+
+  .qh-viol {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--yellow);
+    display: none;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .viol-dot {
+    width: 6px; height: 6px;
+    background: var(--yellow);
+    border-radius: 50%;
+    animation: blink 1.2s infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* Progress bar */
+  .progress-track { height: 3px; background: var(--border); position: sticky; top: 44px; z-index: 99; }
+  .progress-fill  { height: 3px; background: var(--blue); transition: width 0.3s; }
+
+  /* Quiz body */
+  .quiz-body {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 1.75rem 1.5rem;
+  }
+
+  /* Navigator dots */
+  .q-dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 1.5rem;
+  }
+
+  .q-dot {
+    width: 30px; height: 30px;
+    border-radius: 7px;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+
+  .q-dot:hover    { border-color: var(--blue); color: var(--blue); }
+  .q-dot.answered { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .q-dot.current  { border-color: var(--text); color: var(--text); box-shadow: 0 0 0 2px rgba(30,41,59,0.12); }
+
+  /* Question */
+  .q-meta {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.6rem;
+  }
+
+  .q-text {
+    font-size: 0.975rem;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 1.25rem;
+    font-weight: 400;
+  }
+
+  /* KaTeX sizing */
+  .katex { font-size: 1em !important; }
+  .q-text .katex { font-size: 1.05em !important; }
+
+  /* Options */
+  .opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
+
+  .opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    font-family: var(--sans);
+    color: var(--text);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    transition: border-color 0.12s, background 0.12s;
+    text-align: left;
+  }
+
+  .opt:hover    { border-color: var(--blue); background: var(--blue-light); }
+  .opt.selected { border-color: var(--blue); background: var(--blue-light); }
+
+  .opt-key {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: var(--border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: all 0.12s;
+  }
+
+  .opt.selected .opt-key { background: var(--blue); color: #fff; }
+
+  /* Nav row */
+  .nav-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-nav {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 0.65rem 1.1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.12s;
+  }
+
+  .btn-nav:hover { border-color: var(--text-muted); color: var(--text); }
+
+  .btn-submit {
+    margin-left: auto;
+    background: var(--green);
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.65rem 1.4rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: opacity 0.12s;
+  }
+
+  .btn-submit:hover    { opacity: 0.88; }
+  .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ─────────────────────────────────────
+     SCREEN: SUBMITTING
+  ───────────────────────────────────── */
+  #screen-submitting {
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+  }
+
+  /* ─────────────────────────────────────
+     SCREEN: RESULT
+  ───────────────────────────────────── */
+  #screen-result {
+    align-items: center;
+    justify-content: flex-start;
+    padding: 2rem;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+
+  .result-wrap { max-width: 560px; width: 100%; margin: 0 auto; }
+
+  .result-top { text-align: center; margin-bottom: 1.5rem; }
+  .result-top h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 3px; }
+  .result-top p  { font-size: 0.82rem; color: var(--text-muted); }
+
+  /* Skor utama */
+  .score-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .score-num {
+    font-family: var(--mono);
+    font-size: 2.8rem;
+    font-weight: 700;
+    min-width: 80px;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .score-num.good { color: var(--green); }
+  .score-num.mid  { color: var(--yellow); }
+  .score-num.low  { color: var(--red); }
+
+  .score-desc strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
+  .score-desc span   { font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+
+  /* Detail card */
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+
+  .detail-card h3 {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 0.9rem;
+  }
+
+  .d-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+  }
+
+  .d-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .d-row .k { color: var(--text-muted); }
+  .d-row .v { font-family: var(--mono); font-weight: 600; }
+  .d-row .v.red { color: var(--red); }
+
+  /* Riwayat percobaan */
+  .att-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.55rem 0;
+    font-size: 0.85rem;
+  }
+
+  .att-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+
+  .att-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px 7px;
+    min-width: 42px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .att-info    { flex: 1; color: var(--text); font-size: 0.82rem; }
+  .att-penalty { color: var(--red); font-family: var(--mono); font-size: 0.78rem; min-width: 36px; text-align: right; }
+  .att-final   { font-family: var(--mono); font-weight: 700; min-width: 32px; text-align: right; }
+  .att-best    { color: var(--green); }
+
+  /* Formula penalti */
+  .penalty-note {
+    background: var(--yellow-light);
+    border: 1px solid #fde68a;
+    border-radius: var(--radius);
+    padding: 0.8rem 1rem;
+    font-size: 0.8rem;
+    color: #92400e;
+    line-height: 1.65;
+    margin-bottom: 1rem;
+  }
+
+  /* Error */
+  .err-box {
+    background: var(--red-light);
+    border: 1px solid #fecaca;
+    border-radius: var(--radius);
+    padding: 0.8rem 1rem;
+    font-size: 0.8rem;
+    color: #991b1b;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .err-box strong { display: block; margin-bottom: 3px; }
+
+  .btn-retry {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    font-family: var(--sans);
+    margin-bottom: 0.75rem;
+    transition: border-color 0.12s, color 0.12s;
+  }
+
+  .btn-retry:hover    { border-color: var(--blue); color: var(--blue); }
+  .btn-retry:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ─────────────────────────────────────
+     OVERLAY: VIOLATION
+  ───────────────────────────────────── */
+  .viol-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(220,38,38,0.08);
+    backdrop-filter: blur(6px);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .viol-overlay.show { display: flex; }
+
+  .viol-card {
+    background: var(--surface);
+    border: 1.5px solid var(--red);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(220,38,38,0.1);
+  }
+
+  .viol-card h3 { color: var(--red); font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .viol-card p  { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.6; }
+
+  .btn-resume {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 0.65rem 1.4rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: border-color 0.12s;
+  }
+
+  .btn-resume:hover { border-color: var(--text-muted); }
+
+  /* countdown di viol overlay saat auto-submit */
+  .countdown-big {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--red);
+    margin-bottom: 0.5rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     SCREEN: LOADING
+════════════════════════════════════ -->
+<div id="screen-loading" class="screen active">
+  <div class="loading-wrap">
+    <div class="spinner"></div>
+    <p>Memuat soal kuis...</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: ERROR
+════════════════════════════════════ -->
+<div id="screen-error" class="screen">
+  <div class="error-card">
+    <div class="error-icon">⚠️</div>
+    <h2 id="err-title">Kuis Tidak Ditemukan</h2>
+    <p id="err-msg">Link kuis tidak valid atau kuis belum dipublish. Pastikan kamu membuka link yang benar dari dosen.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: START
+════════════════════════════════════ -->
+<div id="screen-start" class="screen">
+  <div class="start-card">
+    <div class="quiz-brand">
+      <span class="brand-badge" id="start-mk">TA3206</span>
+      <span class="brand-name">Institut Teknologi Bandung</span>
+    </div>
+
+    <h1 id="start-title">Kuis Hidrologi dan Sistem Penyaliran Tambang</h1>
+    <div class="subtitle" id="start-subtitle">Masukkan identitas dan baca aturan sebelum memulai.</div>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="ii-lbl">Soal per sesi</div>
+        <div class="ii-val" id="info-soal">—</div>
+      </div>
+      <div class="info-item">
+        <div class="ii-lbl">Pool soal</div>
+        <div class="ii-val" id="info-pool">—</div>
+      </div>
+      <div class="info-item">
+        <div class="ii-lbl">Maks. percobaan</div>
+        <div class="ii-val" id="info-att">—</div>
+      </div>
+      <div class="info-item">
+        <div class="ii-lbl">Penalti</div>
+        <div class="ii-val" id="info-pen">—</div>
+      </div>
+    </div>
+
+    <!-- Notifikasi riwayat NIM -->
+    <div class="history-notice" id="history-notice"></div>
+
+    <div class="rules-box">
+      <strong>Aturan Kuis</strong>
+      Kuis berjalan dalam mode layar penuh. Keluar layar penuh atau berpindah tab akan dicatat sebagai pelanggaran.
+      Pada pelanggaran ke-<span id="rules-maxviol">3</span>, ujian otomatis disubmit.
+      Nilai akhir = nilai terbaik dari semua percobaan setelah dikurangi penalti.
+    </div>
+
+    <div class="input-row" style="margin-bottom: 0.85rem;">
+      <div class="field">
+        <label class="field-label">Nama Lengkap</label>
+        <input type="text" class="text-input" id="inp-name" placeholder="Nama kamu...">
+      </div>
+      <div class="field">
+        <label class="field-label">NIM</label>
+        <input type="text" class="text-input" id="inp-nim"
+          placeholder="NIM kamu..."
+          oninput="onNimInput()">
+      </div>
+    </div>
+
+    <button class="btn-primary" id="btn-start" onclick="startQuiz()">Mulai Kuis</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: FULLSCREEN PROMPT
+════════════════════════════════════ -->
+<div id="screen-fullscreen" class="screen">
+  <div class="fs-card">
+    <div class="fs-icon">⛶</div>
+    <h2>Aktifkan Layar Penuh</h2>
+    <p>Kuis harus dijalankan dalam mode layar penuh untuk mencegah perpindahan tab. Klik tombol di bawah untuk melanjutkan.</p>
+    <button class="btn-primary" onclick="enterFullscreen()">Aktifkan dan Mulai</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: QUIZ
+════════════════════════════════════ -->
+<div id="screen-quiz" class="screen">
+
+  <!-- Header sticky -->
+  <div class="quiz-header">
+    <span class="qh-name" id="qh-name">—</span>
+    <span class="qh-nim"  id="qh-nim">—</span>
+    <span class="qh-attempt" id="qh-attempt">Percobaan 1</span>
+    <div class="qh-viol" id="qh-viol">
+      <div class="viol-dot"></div>
+      <span id="viol-count-text">0 pelanggaran</span>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-track">
+    <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+  </div>
+
+  <!-- Konten soal -->
+  <div class="quiz-body">
+    <div class="q-dots" id="q-dots"></div>
+    <div class="q-meta" id="q-meta">Soal 1 dari —</div>
+    <div class="q-text" id="q-text"></div>
+    <div class="opts"   id="opts"></div>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="prevQ()">← Sebelumnya</button>
+      <button class="btn-nav" onclick="nextQ()">Berikutnya →</button>
+      <button class="btn-submit" id="btn-submit" onclick="confirmSubmit()">Submit Jawaban</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: SUBMITTING
+════════════════════════════════════ -->
+<div id="screen-submitting" class="screen">
+  <div class="loading-wrap">
+    <div class="spinner"></div>
+    <p>Mengirim jawaban ke server...<br>Sedang dikoreksi otomatis.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: RESULT
+════════════════════════════════════ -->
+<div id="screen-result" class="screen">
+  <div class="result-wrap">
+
+    <div class="result-top">
+      <h2>Hasil Kuis</h2>
+      <p id="r-identity">—</p>
+    </div>
+
+    <!-- Banner nilai akhir terbaik -->
+    <div class="score-banner">
+      <div class="score-num" id="r-score-big">—</div>
+      <div class="score-desc">
+        <strong>Nilai Akhir Terbaik</strong>
+        <span id="r-score-desc">—</span>
+      </div>
+    </div>
+
+    <!-- Detail percobaan ini -->
+    <div class="detail-card">
+      <h3>Percobaan Ini</h3>
+      <div class="d-row"><span class="k">Jawaban benar</span><span class="v" id="r-benar">—</span></div>
+      <div class="d-row"><span class="k">Skor mentah</span><span class="v" id="r-raw">—</span></div>
+      <div class="d-row"><span class="k">Penalti percobaan</span><span class="v red" id="r-pen">—</span></div>
+      <div class="d-row"><span class="k">Skor percobaan ini</span><span class="v" id="r-att-score">—</span></div>
+      <div class="d-row"><span class="k">Pelanggaran tab</span><span class="v" id="r-viol">—</span></div>
+    </div>
+
+    <!-- Formula penalti -->
+    <div class="penalty-note" id="r-pen-note">—</div>
+
+    <!-- Riwayat semua percobaan -->
+    <div class="detail-card">
+      <h3>Riwayat Semua Percobaan</h3>
+      <div id="r-history"></div>
+    </div>
+
+    <!-- Error box -->
+    <div class="err-box" id="r-err">
+      <strong>Gagal terhubung ke server</strong>
+      <span id="r-err-msg">Nilai tidak tersimpan. Screenshot halaman ini sebagai bukti.</span>
+    </div>
+
+    <!-- Tombol retry / selesai -->
+    <button class="btn-retry" id="btn-retry" onclick="retryQuiz()">—</button>
+    <button class="btn-primary" onclick="window.location.href = window.location.pathname + window.location.search">Kembali ke Halaman Kuis</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     OVERLAY: VIOLATION
+════════════════════════════════════ -->
+<div class="viol-overlay" id="viol-overlay">
+  <div class="viol-card">
+    <h3>Pelanggaran Terdeteksi</h3>
+    <div class="countdown-big" id="viol-countdown" style="display:none;">3</div>
+    <p id="viol-msg">—</p>
+    <button class="btn-resume" id="btn-resume" onclick="resumeViolation()">Kembali ke Kuis</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+// KONFIGURASI
+// ════════════════════════════════════════════════════
+var APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbylkNraehSTfGa1_02i5Lo4lSB2mB61k-Rwnv9xQVJl/dev';
+var STORAGE_KEY_ATT  = 'kuis_ta3206_attempts';   // riwayat percobaan per NIM
+var STORAGE_KEY_QUIZ = 'admin_kuis_list';          // daftar kuis dari admin.html
+
+// ════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════
+var quizData   = null;   // data kuis yang dimuat
+var quizPool   = [];     // array soal lengkap
+
+var state = {
+  name      : '',
+  nim       : '',
+  currentQ  : 0,
+  answers   : {},        // { originalId: jawabanIndex }
+  shuffledQ : [],        // soal setelah diacak & dipotong
+  attempts  : [],        // riwayat percobaan NIM ini
+  violations: 0,
+  violActive: false,
+  quizActive: false
+};
+
+// ════════════════════════════════════════════════════
+// INIT — baca ID dari URL, muat data kuis
+// ════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function() {
+  var params = new URLSearchParams(window.location.search);
+  var quizId = params.get('id');
+
+  if (!quizId) {
+    showError('Link Tidak Valid', 'Tidak ada ID kuis di URL. Pastikan kamu membuka link yang benar dari dosen.');
+    return;
+  }
+
+  loadQuiz(quizId);
+});
+
+// ════════════════════════════════════════════════════
+// MUAT DATA KUIS
+// Urutan prioritas:
+//   1. Dari Apps Script (backend) — nanti setelah backend jadi
+//   2. Dari localStorage (admin.html yang sama komputer)
+// ════════════════════════════════════════════════════
+function loadQuiz(quizId) {
+  // Coba dari localStorage dulu (untuk testing lokal)
+  var localQuiz = loadQuizFromLocal(quizId);
+
+  if (localQuiz) {
+    quizData = localQuiz;
+    quizPool = buildPoolFromLocal(localQuiz);
+    initStartScreen();
+    return;
+  }
+
+  // TODO: fetch dari Apps Script saat backend sudah siap
+  // fetchQuizFromServer(quizId);
+
+  showError(
+    'Kuis Tidak Ditemukan',
+    'ID kuis "' + quizId + '" tidak ditemukan. Pastikan file admin.html dan kuis.html dibuka di browser yang sama, atau hubungi dosen.'
+  );
+}
+
+function loadQuizFromLocal(quizId) {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY_QUIZ);
+    if (!raw) return null;
+    var list = JSON.parse(raw);
+    return list.find(function(q) { return q.id === quizId; }) || null;
+  } catch(e) { return null; }
+}
+
+// Bangun pool soal dari data yang tersimpan di admin
+// Catatan: di localStorage admin, soal disimpan dalam quizData.sets
+// Tapi karena soal disimpan saat publish, kita perlu set soal dari sesi admin
+// Untuk sementara: gunakan soal dummy jika pool tidak tersedia
+function buildPoolFromLocal(quiz) {
+  // Cek apakah soal tersimpan di quiz object
+  if (quiz._pool && quiz._pool.length > 0) {
+    return quiz._pool;
+  }
+  // Pool belum tersimpan (karena sesi admin sudah ditutup)
+  return [];
+}
+
+// ════════════════════════════════════════════════════
+// START SCREEN
+// ════════════════════════════════════════════════════
+function initStartScreen() {
+  document.getElementById('start-mk').textContent    = quizData.mk || 'TA3206';
+  document.getElementById('start-title').textContent = quizData.nama || 'Kuis';
+  document.getElementById('info-soal').textContent   = quizData.jumlahSoal + ' soal';
+  document.getElementById('info-pool').textContent   = quizData.poolTotal + ' soal';
+  document.getElementById('info-att').textContent    = quizData.config.maxAtt + 'x';
+  document.getElementById('info-pen').textContent    = '-' + quizData.config.penalty + ' poin';
+  document.getElementById('rules-maxviol').textContent = quizData.config.maxViol || 3;
+
+  showScreen('start');
+}
+
+// ════════════════════════════════════════════════════
+// NIM INPUT — cek riwayat percobaan
+// ════════════════════════════════════════════════════
+function onNimInput() {
+  var nim     = document.getElementById('inp-nim').value.trim();
+  var notice  = document.getElementById('history-notice');
+  var maxAtt  = quizData ? quizData.config.maxAtt : 10;
+
+  if (!nim) { notice.className = 'history-notice'; return; }
+
+  var prevAttempts = getAttemptsForNim(nim);
+  var used = prevAttempts.length;
+
+  if (used === 0) {
+    notice.className   = 'history-notice fresh';
+    notice.textContent = 'NIM baru \u2014 belum ada riwayat percobaan untuk kuis ini.';
+  } else if (used >= maxAtt) {
+    notice.className   = 'history-notice full';
+    notice.textContent = 'NIM ini sudah mencapai batas ' + maxAtt + ' percobaan. Tidak dapat mengulang.';
+  } else {
+    var best = Math.max.apply(null, prevAttempts.map(function(a) { return a.final || 0; }));
+    notice.className   = 'history-notice warn';
+    notice.textContent = 'NIM ini sudah ' + used + ' dari ' + maxAtt + ' percobaan. Nilai terbaik saat ini: ' + best + '.';
+  }
+}
+
+function getAttemptsForNim(nim) {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY_ATT);
+    if (!raw) return [];
+    var all  = JSON.parse(raw);
+    var key  = (quizData ? quizData.id : '') + '|' + nim;
+    return all[key] || [];
+  } catch(e) { return []; }
+}
+
+function saveAttempt(nim, attData) {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY_ATT);
+    var all = raw ? JSON.parse(raw) : {};
+    var key = (quizData ? quizData.id : '') + '|' + nim;
+    if (!all[key]) all[key] = [];
+    all[key].push(attData);
+    localStorage.setItem(STORAGE_KEY_ATT, JSON.stringify(all));
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════
+// START QUIZ
+// ════════════════════════════════════════════════════
+function startQuiz() {
+  var name = document.getElementById('inp-name').value.trim();
+  var nim  = document.getElementById('inp-nim').value.trim();
+
+  document.getElementById('inp-name').className = 'text-input' + (name ? '' : ' err');
+  document.getElementById('inp-nim').className  = 'text-input' + (nim  ? '' : ' err');
+  if (!name || !nim) return;
+
+  var maxAtt = quizData ? quizData.config.maxAtt : 10;
+  var prev   = getAttemptsForNim(nim);
+
+  if (prev.length >= maxAtt) {
+    alert('NIM ini sudah mencapai batas ' + maxAtt + ' percobaan.');
+    return;
+  }
+
+  // Jika pool kosong (admin sudah tutup), gunakan soal dummy untuk demo
+  if (quizPool.length === 0) {
+    quizPool = getDemoQuestions();
+  }
+
+  state.name       = name;
+  state.nim        = nim;
+  state.attempts   = prev;
+  state.answers    = {};
+  state.currentQ   = 0;
+  state.violations = 0;
+  state.violActive = false;
+
+  // Acak dan potong soal sesuai konfigurasi
+  state.shuffledQ = prepareQuestions();
+
+  showScreen('fullscreen');
+}
+
+function prepareQuestions() {
+  var pool    = quizPool.slice();
+  var cfg     = quizData ? quizData.config : { maxAtt: 10, penalty: 5 };
+  var jumlah  = quizData ? quizData.jumlahSoal : pool.length;
+  var mode    = quizData ? quizData.modeSoal : 'acak';
+
+  // Acak pool
+  if (!quizData || quizData.config.acak !== false) {
+    pool = shuffleArray(pool);
+  }
+
+  if (mode === 'proporsi' && quizData && quizData.proporsi) {
+    // Ambil sesuai proporsi per set
+    var result = [];
+    Object.keys(quizData.proporsi).forEach(function(setId) {
+      var count    = quizData.proporsi[setId];
+      var setItems = pool.filter(function(q) { return q.setId === setId; });
+      result = result.concat(setItems.slice(0, count));
+    });
+    return shuffleArray(result);
+  }
+
+  // Acak bebas — ambil N pertama
+  return pool.slice(0, Math.min(jumlah, pool.length));
+}
+
+// ════════════════════════════════════════════════════
+// FULLSCREEN
+// ════════════════════════════════════════════════════
+function enterFullscreen() {
+  var el  = document.documentElement;
+  var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+  if (req) req.call(el);
+  setTimeout(function() {
+    showScreen('quiz');
+    initQuizUI();
+    state.quizActive = true;
+  }, 300);
+}
+
+// ════════════════════════════════════════════════════
+// QUIZ UI
+// ════════════════════════════════════════════════════
+function initQuizUI() {
+  var attNum = state.attempts.length + 1;
+  document.getElementById('qh-name').textContent    = state.name;
+  document.getElementById('qh-nim').textContent     = state.nim;
+  document.getElementById('qh-attempt').textContent = 'Percobaan ' + attNum;
+  buildDots();
+  renderQuestion();
+}
+
+function buildDots() {
+  var wrap = document.getElementById('q-dots');
+  wrap.innerHTML = '';
+  state.shuffledQ.forEach(function(q, i) {
+    var d = document.createElement('div');
+    d.className = 'q-dot'
+      + (state.answers[q.id] !== undefined ? ' answered' : '')
+      + (i === state.currentQ ? ' current' : '');
+    d.textContent = i + 1;
+    d.onclick = (function(idx) { return function() { state.currentQ = idx; renderQuestion(); }; })(i);
+    wrap.appendChild(d);
+  });
+}
+
+function renderQuestion() {
+  var q     = state.shuffledQ[state.currentQ];
+  var total = state.shuffledQ.length;
+
+  document.getElementById('q-meta').textContent = 'Soal ' + (state.currentQ + 1) + ' dari ' + total;
+  document.getElementById('prog-fill').style.width = ((state.currentQ + 1) / total * 100) + '%';
+
+  // Render soal dengan KaTeX
+  var qTextEl = document.getElementById('q-text');
+  qTextEl.innerHTML = renderLatex(q.soal);
+
+  // Render pilihan
+  var wrap = document.getElementById('opts');
+  wrap.innerHTML = '';
+
+  // Acak urutan pilihan jika dikonfigurasi
+  var opsiOrder = [0,1,2,3];
+  if (quizData && quizData.config.acakPilihan) {
+    opsiOrder = shuffleArray(opsiOrder);
+  }
+
+  // Simpan mapping urutan tampil → original untuk koreksi
+  if (!q._opsiOrder) q._opsiOrder = {};
+  if (quizData && quizData.config.acakPilihan && !q._opsiOrderSet) {
+    q._opsiOrder    = {};
+    q._opsiOrderSet = true;
+    opsiOrder.forEach(function(origIdx, displayIdx) {
+      q._opsiOrder[displayIdx] = origIdx;
+    });
+  } else if (!quizData || !quizData.config.acakPilihan) {
+    opsiOrder.forEach(function(origIdx, displayIdx) {
+      q._opsiOrder[displayIdx] = origIdx;
+    });
+  }
+
+  opsiOrder.forEach(function(origIdx, displayIdx) {
+    var opt = q.opsi[origIdx];
+    var btn = document.createElement('button');
+    btn.className = 'opt' + (state.answers[q.id] === origIdx ? ' selected' : '');
+
+    var key  = document.createElement('span');
+    key.className   = 'opt-key';
+    key.textContent = String.fromCharCode(65 + displayIdx);
+
+    var txt = document.createElement('span');
+    txt.style.flex = '1';
+    txt.innerHTML  = renderLatex(opt);
+
+    btn.appendChild(key);
+    btn.appendChild(txt);
+    btn.onclick = (function(qId, oIdx) {
+      return function() {
+        state.answers[qId] = oIdx;
+        renderQuestion();
+      };
+    })(q.id, origIdx);
+
+    wrap.appendChild(btn);
+  });
+
+  buildDots();
+}
+
+function prevQ() { if (state.currentQ > 0) { state.currentQ--; renderQuestion(); } }
+function nextQ() { if (state.currentQ < state.shuffledQ.length - 1) { state.currentQ++; renderQuestion(); } }
+
+function confirmSubmit() {
+  var answered = Object.keys(state.answers).length;
+  var total    = state.shuffledQ.length;
+  if (answered < total) {
+    if (!confirm('Masih ada ' + (total - answered) + ' soal belum dijawab. Submit sekarang?')) return;
+  }
+  submitQuiz();
+}
+
+// ════════════════════════════════════════════════════
+// SUBMIT
+// ════════════════════════════════════════════════════
+function submitQuiz() {
+  state.quizActive = false;
+  exitFS();
+  document.getElementById('btn-submit').disabled = true;
+  showScreen('submitting');
+
+  var attNum  = state.attempts.length + 1;
+  var payload = {
+    quizId    : quizData ? quizData.id : 'local',
+    nama      : state.name,
+    nim       : state.nim,
+    jawaban   : state.answers,
+    attemptNum: attNum,
+    violations: state.violations,
+    timestamp : new Date().toISOString()
+  };
+
+  // Coba kirim ke Apps Script
+  if (APPS_SCRIPT_URL && APPS_SCRIPT_URL !== 'GANTI_DENGAN_URL_APPS_SCRIPT_KAMU') {
+    fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.status !== 'ok') throw new Error(data.message || 'Server error');
+        var record = {
+          num       : attNum,
+          benar     : data.benar,
+          total     : data.total,
+          raw       : data.rawScore,
+          penalty   : data.penalty,
+          final     : data.finalScore,
+          violations: state.violations,
+          timestamp : payload.timestamp
+        };
+        state.attempts.push(record);
+        saveAttempt(state.nim, record);
+        showResult(false);
+      })
+      .catch(function(err) {
+        handleSubmitFallback(attNum, payload, err.toString());
+      });
+  } else {
+    // Mode lokal — koreksi di browser pakai kunci dari admin localStorage
+    handleLocalGrading(attNum, payload);
+  }
+}
+
+// Koreksi lokal menggunakan kunci dari admin.html localStorage
+function handleLocalGrading(attNum, payload) {
+  var penalty = quizData ? (attNum - 1) * quizData.config.penalty : 0;
+  var kunci   = quizData ? quizData.kunci : {};
+  var pool    = quizPool;
+
+  var benar = 0;
+  var total = state.shuffledQ.length;
+
+  state.shuffledQ.forEach(function(q) {
+    var jawabanMhs  = payload.jawaban[q.id];
+    var globalIndex = q.globalIndex !== undefined ? q.globalIndex : q.id;
+    if (jawabanMhs !== undefined && kunci[globalIndex] === jawabanMhs) {
+      benar++;
+    }
+  });
+
+  var rawScore   = Math.round((benar / total) * 100);
+  var finalScore = Math.max(0, rawScore - penalty);
+
+  var record = {
+    num       : attNum,
+    benar     : benar,
+    total     : total,
+    raw       : rawScore,
+    penalty   : penalty,
+    final     : finalScore,
+    violations: state.violations,
+    timestamp : payload.timestamp
+  };
+
+  state.attempts.push(record);
+  saveAttempt(state.nim, record);
+  showResult(false);
+}
+
+function handleSubmitFallback(attNum, payload, errMsg) {
+  var record = {
+    num       : attNum,
+    benar     : '?',
+    total     : state.shuffledQ.length,
+    raw       : '?',
+    penalty   : quizData ? (attNum - 1) * quizData.config.penalty : 0,
+    final     : '?',
+    violations: state.violations,
+    failed    : true
+  };
+  state.attempts.push(record);
+  showResult(true, errMsg);
+}
+
+function exitFS() {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (document.webkitFullscreenElement) document.webkitExitFullscreen();
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════
+// RESULT
+// ════════════════════════════════════════════════════
+function showResult(hasErr, errMsg) {
+  showScreen('result');
+
+  var last   = state.attempts[state.attempts.length - 1];
+  var attNum = state.attempts.length;
+  var maxAtt = quizData ? quizData.config.maxAtt : 10;
+  var pen    = quizData ? quizData.config.penalty : 5;
+
+  document.getElementById('r-identity').textContent = state.name + ' \u00b7 ' + state.nim;
+  document.getElementById('r-benar').textContent    = last.failed ? '\u2014' : last.benar + ' / ' + last.total;
+  document.getElementById('r-raw').textContent      = last.failed ? '\u2014' : last.raw + ' poin';
+  document.getElementById('r-pen').textContent      = last.penalty > 0 ? '-' + last.penalty + ' poin' : '0';
+  document.getElementById('r-att-score').textContent= last.failed ? '\u2014' : last.final + ' poin';
+  document.getElementById('r-viol').textContent     = last.violations + 'x';
+
+  // Nilai terbaik
+  var valid = state.attempts.filter(function(a) { return !a.failed; });
+  var best  = valid.length ? Math.max.apply(null, valid.map(function(a) { return a.final; })) : '—';
+
+  var bigEl = document.getElementById('r-score-big');
+  bigEl.textContent = best;
+  bigEl.className   = 'score-num ' + (typeof best !== 'number' ? 'mid' : best >= 75 ? 'good' : best >= 55 ? 'mid' : 'low');
+
+  document.getElementById('r-score-desc').textContent =
+    'Nilai terbaik dari ' + attNum + ' percobaan. Penalti ' + pen + ' poin per percobaan ke-2 dst.';
+
+  document.getElementById('r-pen-note').textContent =
+    'Rumus: Skor percobaan = Skor mentah \u2212 (No. percobaan \u2212 1) \u00d7 ' + pen + '. Nilai akhir = skor tertinggi dari semua percobaan.';
+
+  // Error box
+  var errBox = document.getElementById('r-err');
+  if (hasErr) {
+    errBox.style.display = 'block';
+    document.getElementById('r-err-msg').textContent = errMsg || 'Tidak dapat menghubungi server.';
+  } else {
+    errBox.style.display = 'none';
+  }
+
+  // Riwayat
+  var hist = document.getElementById('r-history');
+  hist.innerHTML = '';
+  state.attempts.forEach(function(a) {
+    var isBest = !a.failed && a.final === best;
+    var row    = document.createElement('div');
+    row.className = 'att-row';
+    row.innerHTML =
+      '<span class="att-badge">Ke-' + a.num + '</span>' +
+      '<span class="att-info">' + (a.failed ? 'Gagal terhubung server' : a.benar + '/' + a.total + ' benar \u00b7 mentah ' + a.raw) + '</span>' +
+      '<span class="att-penalty">' + (a.penalty > 0 ? '-' + a.penalty : '') + '</span>' +
+      '<span class="att-final ' + (isBest ? 'att-best' : '') + '">' + (a.failed ? '?' : a.final + (isBest ? ' \u2605' : '')) + '</span>';
+    hist.appendChild(row);
+  });
+
+  // Tombol retry
+  var canRetry = attNum < maxAtt;
+  var retryBtn = document.getElementById('btn-retry');
+  if (canRetry) {
+    retryBtn.disabled     = false;
+    retryBtn.textContent  = 'Coba Lagi (Percobaan ke-' + (attNum + 1) + ')';
+  } else {
+    retryBtn.disabled    = true;
+    retryBtn.textContent = 'Percobaan sudah habis (' + maxAtt + 'x)';
+  }
+
+  document.getElementById('btn-submit').disabled = false;
+}
+
+function retryQuiz() {
+  var maxAtt = quizData ? quizData.config.maxAtt : 10;
+  if (state.attempts.length >= maxAtt) { alert('Percobaan sudah habis.'); return; }
+  state.answers    = {};
+  state.currentQ   = 0;
+  state.violations = 0;
+  state.violActive = false;
+  state.shuffledQ  = prepareQuestions();
+  showScreen('fullscreen');
+}
+
+// ════════════════════════════════════════════════════
+// VIOLATION SYSTEM
+// ════════════════════════════════════════════════════
+var countdownInterval = null;
+
+function triggerViolation(msg) {
+  if (!state.quizActive || state.violActive) return;
+  state.violations++;
+  state.violActive = true;
+
+  var maxViol = quizData ? (quizData.config.maxViol || 3) : 3;
+
+  // Update header
+  var hViol = document.getElementById('qh-viol');
+  hViol.style.display = 'flex';
+  document.getElementById('viol-count-text').textContent = state.violations + ' pelanggaran';
+
+  // Overlay
+  var cd      = document.getElementById('viol-countdown');
+  var vMsg    = document.getElementById('viol-msg');
+  var btnRes  = document.getElementById('btn-resume');
+
+  document.getElementById('viol-overlay').classList.add('show');
+
+  if (state.violations >= maxViol) {
+    // Auto-submit countdown
+    cd.style.display = 'block';
+    cd.textContent   = '3';
+    btnRes.style.display = 'none';
+    vMsg.textContent = msg + ' Batas pelanggaran tercapai \u2014 ujian otomatis disubmit.';
+
+    var count = 3;
+    countdownInterval = setInterval(function() {
+      count--;
+      cd.textContent = count;
+      if (count <= 0) {
+        clearInterval(countdownInterval);
+        document.getElementById('viol-overlay').classList.remove('show');
+        submitQuiz();
+      }
+    }, 1000);
+  } else {
+    cd.style.display     = 'none';
+    btnRes.style.display = '';
+    vMsg.textContent = msg + ' Total: ' + state.violations + '/' + maxViol + ' pelanggaran.';
+  }
+}
+
+function resumeViolation() {
+  var maxViol = quizData ? (quizData.config.maxViol || 3) : 3;
+  if (state.violations >= maxViol) return;
+  document.getElementById('viol-overlay').classList.remove('show');
+  state.violActive = false;
+  var el = document.documentElement;
+  var req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (req) req.call(el).catch(function(){});
+}
+
+// ════════════════════════════════════════════════════
+// SECURITY LISTENERS
+// ════════════════════════════════════════════════════
+document.addEventListener('fullscreenchange', function() {
+  if (!state.quizActive) return;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement)
+    triggerViolation('Kamu keluar dari mode layar penuh.');
+});
+
+document.addEventListener('webkitfullscreenchange', function() {
+  if (!state.quizActive) return;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement)
+    triggerViolation('Kamu keluar dari mode layar penuh.');
+});
+
+document.addEventListener('visibilitychange', function() {
+  if (!state.quizActive) return;
+  if (document.hidden) triggerViolation('Kamu berpindah tab atau meminimalkan jendela.');
+});
+
+window.addEventListener('blur', function() {
+  if (!state.quizActive) return;
+  triggerViolation('Kamu berpindah ke aplikasi lain.');
+});
+
+document.addEventListener('contextmenu', function(e) {
+  if (state.quizActive) e.preventDefault();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (!state.quizActive) return;
+  if (['F12','F11','F5'].indexOf(e.key) > -1) e.preventDefault();
+  if (e.ctrlKey || e.metaKey) {
+    var blocked = ['c','v','u','a','p','s','n','w'];
+    if (blocked.indexOf(e.key.toLowerCase()) > -1) e.preventDefault();
+    if (e.key.toLowerCase() === 't') {
+      e.preventDefault();
+      triggerViolation('Kamu mencoba membuka tab baru.');
+    }
+  }
+  if (e.altKey && e.key === 'Tab') {
+    e.preventDefault();
+    triggerViolation('Kamu mencoba berpindah aplikasi.');
+  }
+});
+
+// ════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById('screen-' + id).classList.add('active');
+}
+
+function showError(title, msg) {
+  document.getElementById('err-title').textContent = title;
+  document.getElementById('err-msg').textContent   = msg;
+  showScreen('error');
+}
+
+function shuffleArray(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+// Render teks dengan KaTeX untuk notasi $...$
+function renderLatex(text) {
+  if (!text) return '';
+  if (!/\$[^$]+\$/.test(text)) return escapeHtml(text);
+
+  var result = '';
+  var parts  = text.split(/(\$[^$]+\$)/g);
+  parts.forEach(function(part) {
+    if (/^\$[^$]+\$$/.test(part)) {
+      try {
+        result += katex.renderToString(part.slice(1,-1), { throwOnError: false, displayMode: false });
+      } catch(e) {
+        result += '<code style="background:#fef2f2;color:#dc2626;padding:1px 4px;border-radius:3px;font-size:0.85em;">' + escapeHtml(part) + '</code>';
+      }
+    } else {
+      result += escapeHtml(part);
+    }
+  });
+  return result;
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// Soal demo untuk testing ketika pool kosong (admin sudah ditutup)
+function getDemoQuestions() {
+  return [
+    { id: 0, globalIndex: 0, soal: 'Ini adalah soal demo karena data kuis dibuka di browser berbeda dari admin. Pada sistem final, soal dimuat dari server.', opsi: ['A. Pilihan A','B. Pilihan B','C. Pilihan C','D. Pilihan D'], setId: 'demo', setLabel: 'Demo' },
+    { id: 1, globalIndex: 1, soal: 'Rumus neraca air dinyatakan sebagai $P = E + R + \\Delta S$. Jika P = 1200, E = 650, $\\Delta S$ = 50, maka R adalah...', opsi: ['A. 600','B. 500','C. 450','D. 550'], setId: 'demo', setLabel: 'Demo' },
+    { id: 2, globalIndex: 2, soal: 'Bilangan Reynolds untuk aliran dalam pipa dinyatakan sebagai $Re = VD/\\nu$. Aliran bersifat laminar jika...', opsi: ['A. Re > 4000','B. Re < 2000','C. Re = 2000','D. Re > 2000'], setId: 'demo', setLabel: 'Demo' }
+  ];
+}
+</script>
+</body>
+</html>
