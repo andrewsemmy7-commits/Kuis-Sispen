@@ -1132,7 +1132,6 @@ function startQuiz() {
 
 function prepareQuestions() {
   var pool    = quizPool.slice();
-  var cfg     = quizData ? quizData.config : { maxAtt: 10, penalty: 5 };
   var jumlah  = quizData ? quizData.jumlahSoal : pool.length;
   var mode    = quizData ? quizData.modeSoal : 'acak';
 
@@ -1140,20 +1139,37 @@ function prepareQuestions() {
   if (!quizData || quizData.config.acak !== false) {
     pool = shuffleArray(pool);
   }
+  var selected = [];
 
   if (mode === 'proporsi' && quizData && quizData.proporsi) {
     // Ambil sesuai proporsi per set
-    var result = [];
+    
     Object.keys(quizData.proporsi).forEach(function(setId) {
       var count    = quizData.proporsi[setId];
       var setItems = pool.filter(function(q) { return q.setId === setId; });
-      result = result.concat(setItems.slice(0, count));
+      selected = selected.concat(setItems.slice(0, count));
     });
-    return shuffleArray(result);
+    selected = shuffleArray(selected);
+  } else {
+    selected = pool.slice(0, Math.min(jumlah, pool.length));
   }
 
-  // Acak bebas — ambil N pertama
-  return pool.slice(0, Math.min(jumlah, pool.length));
+  selected = selected.map(function(q) {
+    var copy = Object.assign({}, q);
+    copy._opsiOrder = { 0: 0, 1: 1, 2: 2, 3: 3 };
+
+    if (quizData && quizData.config.acakPilihan) {
+      var shuffled = shuffleArray([0, 1, 2, 3]);
+      copy._opsiOrder = {};
+      shuffled.forEach(function(origIdx, displayIdx) {
+        copy._opsiOrder[displayIdx] = origIdx;
+      });
+    }
+
+    return copy;
+  });
+
+  return selected;
 }
 
 // ════════════════════════════════════════════════════
@@ -1213,49 +1229,31 @@ function renderQuestion() {
   wrap.innerHTML = '';
 
   // Acak urutan pilihan jika dikonfigurasi
-  var opsiOrder = [0,1,2,3];
-  if (quizData && quizData.config.acakPilihan) {
-    opsiOrder = shuffleArray(opsiOrder);
-  }
+  [0,1,2,3].forEach(function(displayIdx) {
+  var origIdx = q._opsiOrder[displayIdx];
+  var opt = q.opsi[origIdx];
+  var btn = document.createElement('button');
+  btn.className = 'opt' + (state.answers[q.id] === origIdx ? ' selected' : '');
 
-  // Simpan mapping urutan tampil → original untuk koreksi
-  if (!q._opsiOrder) q._opsiOrder = {};
-  if (quizData && quizData.config.acakPilihan && !q._opsiOrderSet) {
-    q._opsiOrder    = {};
-    q._opsiOrderSet = true;
-    opsiOrder.forEach(function(origIdx, displayIdx) {
-      q._opsiOrder[displayIdx] = origIdx;
-    });
-  } else if (!quizData || !quizData.config.acakPilihan) {
-    opsiOrder.forEach(function(origIdx, displayIdx) {
-      q._opsiOrder[displayIdx] = origIdx;
-    });
-  }
+  var key  = document.createElement('span');
+  key.className   = 'opt-key';
+  key.textContent = String.fromCharCode(65 + displayIdx);
 
-  opsiOrder.forEach(function(origIdx, displayIdx) {
-    var opt = q.opsi[origIdx];
-    var btn = document.createElement('button');
-    btn.className = 'opt' + (state.answers[q.id] === origIdx ? ' selected' : '');
+  var txt = document.createElement('span');
+  txt.style.flex = '1';
+  txt.innerHTML  = renderLatex(opt);
 
-    var key  = document.createElement('span');
-    key.className   = 'opt-key';
-    key.textContent = String.fromCharCode(65 + displayIdx);
+  btn.appendChild(key);
+  btn.appendChild(txt);
+  btn.onclick = (function(qId, oIdx) {
+    return function() {
+      state.answers[qId] = oIdx;
+      renderQuestion();
+    };
+  })(q.id, origIdx);
 
-    var txt = document.createElement('span');
-    txt.style.flex = '1';
-    txt.innerHTML  = renderLatex(opt);
-
-    btn.appendChild(key);
-    btn.appendChild(txt);
-    btn.onclick = (function(qId, oIdx) {
-      return function() {
-        state.answers[qId] = oIdx;
-        renderQuestion();
-      };
-    })(q.id, origIdx);
-
-    wrap.appendChild(btn);
-  });
+  wrap.appendChild(btn);
+});
 
   buildDots();
 }
@@ -1356,6 +1354,9 @@ function submitQuiz() {
       if (data.status !== 'ok') throw new Error(data.message || 'Server error');
 
       var record = {
+        quizId: quizData.id,
+        name: state.name,
+        nim: state.nim,
         num: attNum,
         benar: data.benar,
         total: data.total,
@@ -1396,6 +1397,9 @@ function handleLocalGrading(attNum, payload) {
   var finalScore = Math.max(0, rawScore - penalty);
 
   var record = {
+    quizId: quizData.id,
+    nama: state.name,
+    nim: state.nim,
     num       : attNum,
     benar     : benar,
     total     : total,
@@ -1413,6 +1417,9 @@ function handleLocalGrading(attNum, payload) {
 
 function handleSubmitFallback(attNum, payload, errMsg) {
   var record = {
+    quizId: quizData.id,
+    nama: state.name,
+    nim: state.nim,
     num       : attNum,
     benar     : '?',
     total     : state.shuffledQ.length,
