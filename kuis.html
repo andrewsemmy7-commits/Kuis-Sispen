@@ -840,6 +840,7 @@
     <span class="qh-name" id="qh-name">—</span>
     <span class="qh-nim"  id="qh-nim">—</span>
     <span class="qh-attempt" id="qh-attempt">Percobaan 1</span>
+    <span class="qh-attempt" id="qh-timer">00:00</span>
     <div class="qh-viol" id="qh-viol">
       <div class="viol-dot"></div>
       <span id="viol-count-text">0 pelanggaran</span>
@@ -942,7 +943,7 @@
 // ════════════════════════════════════════════════════
 // KONFIGURASI
 // ════════════════════════════════════════════════════
-var APPS_SCRIPT_URL  = 'https://script.google.com/macros/s/AKfycbylkNraehSTfGa1_02i5Lo4lSB2mB61k-Rwnv9xQVJl/dev';
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVrx5kL_wsyoGaG1kSOzf14xh5a5focgI2PurwX4HZ7NCfDmIvJsqmGf-8Dh6sALfjbg/exec';
 var STORAGE_KEY_ATT  = 'kuis_ta3206_attempts';   // riwayat percobaan per NIM
 var STORAGE_KEY_QUIZ = 'admin_kuis_list';          // daftar kuis dari admin.html
 
@@ -961,7 +962,9 @@ var state = {
   attempts  : [],        // riwayat percobaan NIM ini
   violations: 0,
   violActive: false,
-  quizActive: false
+  quizActive: false,
+  timerLeft : 0,
+  timerInterval: null
 };
 
 // ════════════════════════════════════════════════════
@@ -987,23 +990,23 @@ window.addEventListener('DOMContentLoaded', function() {
 // ════════════════════════════════════════════════════
 function loadQuiz(quizId) {
   // Coba dari localStorage dulu (untuk testing lokal)
-  var localQuiz = loadQuizFromLocal(quizId);
+  fetch(APPS_SCRIPT_URL + '?action=getQuiz&id=' + encodeURIComponent(quizId))
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.status !== 'ok') {
+        throw new Error(data.message || 'Quiz tidak ditemukan');
+      }
 
-  if (localQuiz) {
-    quizData = localQuiz;
-    quizPool = buildPoolFromLocal(localQuiz);
-    initStartScreen();
-    return;
-  }
-
+      quizData = data.quiz;
+      quizPool = data.quiz._pool || [];
+      initStartScreen();
+    })
+    .catch(function(err) {
+      showError('Kuis Tidak Ditemukan', err.message);
+    });
+}
   // TODO: fetch dari Apps Script saat backend sudah siap
   // fetchQuizFromServer(quizId);
-
-  showError(
-    'Kuis Tidak Ditemukan',
-    'ID kuis "' + quizId + '" tidak ditemukan. Pastikan file admin.html dan kuis.html dibuka di browser yang sama, atau hubungi dosen.'
-  );
-}
 
 function loadQuizFromLocal(quizId) {
   try {
@@ -1164,6 +1167,7 @@ function enterFullscreen() {
     showScreen('quiz');
     initQuizUI();
     state.quizActive = true;
+    startTimer();
   }, 300);
 }
 
@@ -1273,48 +1277,51 @@ function confirmSubmit() {
 // ════════════════════════════════════════════════════
 function submitQuiz() {
   state.quizActive = false;
+  stopTimer();
   exitFS();
   document.getElementById('btn-submit').disabled = true;
   showScreen('submitting');
 
   var attNum  = state.attempts.length + 1;
   var payload = {
-    quizId    : quizData ? quizData.id : 'local',
+    action    : 'submitAttempt',
+    quizId    : quizData.id ,
     nama      : state.name,
     nim       : state.nim,
     jawaban   : state.answers,
     attemptNum: attNum,
     violations: state.violations,
-    timestamp : new Date().toISOString()
+    timestamp : new Date().toISOString(),
+    questionsSnapshot: state.shuffledQ.map(function(q) { return { id: q.id, globalIndex: q.globalIndex }; })
   };
 
   // Coba kirim ke Apps Script
-  if (APPS_SCRIPT_URL && APPS_SCRIPT_URL !== 'GANTI_DENGAN_URL_APPS_SCRIPT_KAMU') {
-    fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (data.status !== 'ok') throw new Error(data.message || 'Server error');
-        var record = {
-          num       : attNum,
-          benar     : data.benar,
-          total     : data.total,
-          raw       : data.rawScore,
-          penalty   : data.penalty,
-          final     : data.finalScore,
-          violations: state.violations,
-          timestamp : payload.timestamp
-        };
-        state.attempts.push(record);
-        saveAttempt(state.nim, record);
-        showResult(false);
-      })
-      .catch(function(err) {
-        handleSubmitFallback(attNum, payload, err.toString());
-      });
-  } else {
-    // Mode lokal — koreksi di browser pakai kunci dari admin localStorage
-    handleLocalGrading(attNum, payload);
-  }
+   fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.status !== 'ok') throw new Error(data.message || 'Server error');
+
+      var record = {
+        num: attNum,
+        benar: data.benar,
+        total: data.total,
+        raw: data.rawScore,
+        penalty: data.penalty,
+        final: data.finalScore,
+        violations: state.violations,
+        timestamp: payload.timestamp
+      };
+
+      state.attempts.push(record);
+      saveAttempt(state.nim, record);
+      showResult(false);
+    })
+    .catch(function(err) {
+      handleSubmitFallback(attNum, payload, err.toString());
+    });
 }
 
 // Koreksi lokal menggunakan kunci dari admin.html localStorage
@@ -1378,6 +1385,35 @@ function exitFS() {
 // ════════════════════════════════════════════════════
 // RESULT
 // ════════════════════════════════════════════════════
+function hitungNilaiAkhirBaru(attempts) {
+  var valid = attempts.filter(function(a) {
+    return !a.failed && typeof a.raw === 'number';
+  });
+
+  if (valid.length === 0) {
+    return {
+      A1: 0,
+      Amax: 0,
+      N: 0,
+      finalScore: 0
+    };
+  }
+
+  var A1 = valid[0].raw;
+  var Amax = Math.max.apply(null, valid.map(function(a) { return a.raw; }));
+  var N = valid.length;
+
+  var finalScore = (0.8 * A1) + (0.2 * Amax) - (3 * (N - 1));
+  finalScore = Math.max(0, Math.round(finalScore * 100) / 100);
+
+  return {
+    A1: A1,
+    Amax: Amax,
+    N: N,
+    finalScore: finalScore
+  };
+}
+
 function showResult(hasErr, errMsg) {
   showScreen('result');
 
@@ -1389,24 +1425,26 @@ function showResult(hasErr, errMsg) {
   document.getElementById('r-identity').textContent = state.name + ' \u00b7 ' + state.nim;
   document.getElementById('r-benar').textContent    = last.failed ? '\u2014' : last.benar + ' / ' + last.total;
   document.getElementById('r-raw').textContent      = last.failed ? '\u2014' : last.raw + ' poin';
-  document.getElementById('r-pen').textContent      = last.penalty > 0 ? '-' + last.penalty + ' poin' : '0';
-  document.getElementById('r-att-score').textContent= last.failed ? '\u2014' : last.final + ' poin';
+  document.getElementById('r-pen').textContent      = 0;
+  document.getElementById('r-att-score').textContent= last.failed ? '—' : last.raw + ' poin';
   document.getElementById('r-viol').textContent     = last.violations + 'x';
 
   // Nilai terbaik
-  var valid = state.attempts.filter(function(a) { return !a.failed; });
-  var best  = valid.length ? Math.max.apply(null, valid.map(function(a) { return a.final; })) : '—';
+ var hasilAkhir = hitungNilaiAkhirBaru(state.attempts);
 
-  var bigEl = document.getElementById('r-score-big');
-  bigEl.textContent = best;
-  bigEl.className   = 'score-num ' + (typeof best !== 'number' ? 'mid' : best >= 75 ? 'good' : best >= 55 ? 'mid' : 'low');
+var finalNilai = hasilAkhir.finalScore;
+var bigEl = document.getElementById('r-score-big');
+bigEl.textContent = hasilAkhir.N > 0 ? finalNilai : '—';
+bigEl.className = 'score-num ' + (typeof finalNilai !== 'number' ? 'mid' : finalNilai >= 75 ? 'good' : finalNilai >= 55 ? 'mid' : 'low');
 
-  document.getElementById('r-score-desc').textContent =
-    'Nilai terbaik dari ' + attNum + ' percobaan. Penalti ' + pen + ' poin per percobaan ke-2 dst.';
+document.getElementById('r-score-desc').textContent =
+  'Dihitung dari rumus: 0.8×A1 + 0.2×Amax − 3×(N−1), dengan A1 = nilai percobaan pertama, Amax = nilai tertinggi.';
 
-  document.getElementById('r-pen-note').textContent =
-    'Rumus: Skor percobaan = Skor mentah \u2212 (No. percobaan \u2212 1) \u00d7 ' + pen + '. Nilai akhir = skor tertinggi dari semua percobaan.';
-
+document.getElementById('r-pen-note').textContent =
+  'A1 = ' + hasilAkhir.A1 +
+  ', Amax = ' + hasilAkhir.Amax +
+  ', N = ' + hasilAkhir.N +
+  ' → Nilai akhir = 0.8(' + hasilAkhir.A1 + ') + 0.2(' + hasilAkhir.Amax + ') − 3(' + hasilAkhir.N + '−1) = ' + finalNilai;
   // Error box
   var errBox = document.getElementById('r-err');
   if (hasErr) {
@@ -1420,16 +1458,21 @@ function showResult(hasErr, errMsg) {
   var hist = document.getElementById('r-history');
   hist.innerHTML = '';
   state.attempts.forEach(function(a) {
-    var isBest = !a.failed && a.final === best;
-    var row    = document.createElement('div');
+    var isMax = !a.failed && typeof a.raw === 'number' && a.raw === hasilAkhir.Amax;
+    var row = document.createElement('div');
     row.className = 'att-row';
     row.innerHTML =
       '<span class="att-badge">Ke-' + a.num + '</span>' +
-      '<span class="att-info">' + (a.failed ? 'Gagal terhubung server' : a.benar + '/' + a.total + ' benar \u00b7 mentah ' + a.raw) + '</span>' +
+      '<span class="att-info">' +
+      (a.failed ? 'Gagal terhubung server' : a.benar + '/' + a.total + ' benar · mentah ' + a.raw) +
+      '</span>' +
       '<span class="att-penalty">' + (a.penalty > 0 ? '-' + a.penalty : '') + '</span>' +
-      '<span class="att-final ' + (isBest ? 'att-best' : '') + '">' + (a.failed ? '?' : a.final + (isBest ? ' \u2605' : '')) + '</span>';
-    hist.appendChild(row);
-  });
+      '<span class="att-final ' + (isMax ? 'att-best' : '') + '">' +
+      (a.failed ? '?' : a.raw + (isMax ? ' ★' : '')) +
+    '</span>';
+
+  hist.appendChild(row);
+});
 
   // Tombol retry
   var canRetry = attNum < maxAtt;
