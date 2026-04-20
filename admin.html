@@ -2115,7 +2115,7 @@ linkEl.textContent = fullLink;
 document.getElementById('link-card').style.display = 'block';
 
 alert('Kuis "' + nama + '" berhasil disimpan!\n\nID Kuis: ' + quizId + '\nLink: ' + fullLink);
-
+}
 function copyLink() {
   var txt = document.getElementById('link-text').textContent;
   navigator.clipboard.writeText(txt).then(function() {
