@@ -1271,7 +1271,58 @@ function confirmSubmit() {
   }
   submitQuiz();
 }
+function formatTime(totalSeconds) {
+  var m = Math.floor(totalSeconds / 60);
+  var s = totalSeconds % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
 
+function updateTimerDisplay() {
+  var el = document.getElementById('qh-timer');
+  if (!el) return;
+
+  el.textContent = formatTime(state.timerLeft);
+
+  if (state.timerLeft <= 300) {
+    el.style.background = 'var(--red-light)';
+    el.style.color = 'var(--red)';
+    el.style.border = '1px solid #fecaca';
+  } else if (state.timerLeft <= 900) {
+    el.style.background = 'var(--yellow-light)';
+    el.style.color = 'var(--yellow)';
+    el.style.border = '1px solid #fde68a';
+  }
+}
+
+function startTimer() {
+  stopTimer();
+
+  var durationMinutes = 45;
+  if (quizData && quizData.config && quizData.config.durationMinutes) {
+    durationMinutes = parseInt(quizData.config.durationMinutes) || 45;
+  }
+
+  state.timerLeft = durationMinutes * 60;
+  updateTimerDisplay();
+
+  state.timerInterval = setInterval(function() {
+    state.timerLeft--;
+    updateTimerDisplay();
+
+    if (state.timerLeft <= 0) {
+      stopTimer();
+      alert('Waktu habis. Kuis akan otomatis disubmit.');
+      submitQuiz();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (state.timerInterval) {
+    clearInterval(state.timerInterval);
+    state.timerInterval = null;
+  }
+}
 // ════════════════════════════════════════════════════
 // SUBMIT
 // ════════════════════════════════════════════════════
