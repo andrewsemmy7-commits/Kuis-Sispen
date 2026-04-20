@@ -1371,7 +1371,7 @@ D. Pilihan D</div>
 // ═══════════════════════════════════════════
 // KONSTANTA
 // ═══════════════════════════════════════════
-var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVrx5kL_wsyoGaG1kSOzf14xh5a5focgI2PurwX4HZ7NCfDmIvJsqmGf-8Dh6sALfjbg/exec';
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMpNDaCBZm9tfz0iEwGzC1Whb024wXy3goF6-DwgvTFfG1XODIzaLvaWi15gd8scgMiA/exec';
 var STORAGE_KEY_QUIZ = 'admin_kuis_list';
 
 // Warna untuk setiap set soal
@@ -1995,11 +1995,7 @@ function buildPublishPreview() {
       pass : actualJumlah > 0 && actualJumlah <= pool.length,
       desc : actualJumlah + ' soal per mahasiswa dari pool ' + pool.length
     },
-    {
-      label: 'Backend Apps Script',
-      warn : true,
-      desc : 'Belum terhubung — kuis disimpan lokal untuk sementara'
-    }
+    
   ];
 
   var html = '';
@@ -2179,13 +2175,6 @@ function updateDashboardStats() {
   document.getElementById('nc-total').textContent        = total;
 }
 
-function copyQuizLink(quizId) {
-  var base = window.location.origin + window.location.pathname.replace('admin.html', '');
-  var link = base + 'kuis.html?id=' + quizId;
-  navigator.clipboard.writeText(link).then(function() {
-    alert('Link disalin: ' + link);
-  });
-}
 
 function deleteQuiz(quizId) {
   if (!confirm('Hapus kuis ini? Data nilai juga akan ikut terhapus.')) return;
@@ -2211,35 +2200,44 @@ function renderNilai() {
     select.appendChild(opt);
   });
 
-  // Tampilkan data nilai (dari localStorage sementara)
+  // Tampilkan data nilai
   var tbody = document.getElementById('nilai-tbody');
-  var nilaiData = getNilaiData(select.value);
+ // loading state
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem;">Loading...</td></tr>';
 
-  if (nilaiData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:2rem;">Belum ada data nilai</td></tr>';
-    document.getElementById('nc-nilai').textContent = '0';
-    return;
-  }
+  fetchAttemptsFromServer()
+    .then(function(serverData) {
+      var nilaiData = mapAttemptsToAdmin(serverData, select.value);
+ 
+      if (nilaiData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:2rem;">Belum ada data nilai</td></tr>';
+        document.getElementById('nc-nilai').textContent = '0';
+        return;
+      }
 
-  document.getElementById('nc-nilai').textContent = nilaiData.length;
-
-  tbody.innerHTML = '';
-  nilaiData.forEach(function(row) {
-    var scoreClass = row.nilai >= 75 ? 'score-high' : row.nilai >= 55 ? 'score-mid' : 'score-low';
-    var tr = document.createElement('tr');
-    tr.innerHTML =
-      '<td>' + row.nama + '</td>' +
-      '<td style="font-family:var(--mono); font-size:12px;">' + row.nim + '</td>' +
-      '<td>' + row.namaKuis + '</td>' +
-      '<td style="font-family:var(--mono); text-align:center;">' + row.percobaan + '</td>' +
-      '<td style="font-family:var(--mono); text-align:center;">' + row.benar + '/' + row.total + '</td>' +
-      '<td><span class="score-chip ' + scoreClass + '">' + row.nilai + '</span></td>' +
-      '<td style="font-size:0.78rem; color:var(--text-muted);">' + new Date(row.waktu).toLocaleString('id-ID') + '</td>' +
-      '<td><button class="btn btn-danger btn-sm" onclick="hapusNilaiManual(\'' + row.key + '\', ' + row.percobaan + ', \'' + row.waktu + '\')">Hapus</button></td>';
-    tbody.appendChild(tr);
-  });
+      document.getElementById('nc-nilai').textContent = nilaiData.length;
+      tbody.innerHTML = '';
+  
+      nilaiData.forEach(function(row) {
+        var scoreClass = row.nilai >= 75 ? 'score-high' : row.nilai >= 55 ? 'score-mid' : 'score-low';
+        var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + row.nama + '</td>' +
+        '<td style="font-family:var(--mono); font-size:12px;">' + row.nim + '</td>' +
+        '<td>' + row.namaKuis + '</td>' +
+        '<td style="font-family:var(--mono); text-align:center;">' + row.percobaan + '</td>' +
+        '<td style="font-family:var(--mono); text-align:center;">' + row.benar + '/' + row.total + '</td>' +
+        '<td><span class="score-chip ' + scoreClass + '">' + row.nilai + '</span></td>' +
+        '<td style="font-size:0.78rem; color:var(--text-muted);">' + new Date(row.waktu).toLocaleString('id-ID') + '</td>' +
+        '<td><button class="btn btn-danger btn-sm" onclick="hapusNilaiManual(\'' + row.key + '\', ' + row.percobaan + ', \'' + row.waktu + '\')">Hapus</button></td>';
+      tbody.appendChild(tr);
+    });
+})
+    .catch(function(err) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red; padding:2rem;">Gagal ambil data</td></tr>';
+      console.error(err);
+    });
 }
-
 function getNilaiData(filterQuizId) {
   try {
     var raw = localStorage.getItem('kuis_ta3206_attempts');
@@ -2273,6 +2271,48 @@ function getNilaiData(filterQuizId) {
     return result.sort(function(a,b) { return new Date(b.waktu) - new Date(a.waktu); });
   } catch(e) { return []; }
 }
+function copyQuizLink(quizId) {
+  var base = window.location.origin + window.location.pathname.replace('admin.html', '');
+  var link = base + 'kuis.html?id=' + quizId;
+  navigator.clipboard.writeText(link).then(function() {
+    alert('Link disalin: ' + link);
+  });
+}
+function fetchAttemptsFromServer() {
+  return fetch(APPS_SCRIPT_URL + '?action=getAttempts')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.status !== 'ok') {
+        throw new Error(data.message || 'Gagal ambil data');
+      }
+      return data.data || [];
+    });
+}
+function mapAttemptsToAdmin(data, filterQuizId) {
+  return data
+    .filter(function(att) {
+      return !filterQuizId || att.quizId === filterQuizId;
+    })
+    .map(function(att) {
+      var quiz = quizList.find(function(q) { return q.id === att.quizId; });
+
+      return {
+        key: att.quizId + '|' + att.nim,
+        quizId: att.quizId,
+        nama: att.nama || '-',
+        nim: att.nim || '-',
+        namaKuis: quiz ? quiz.nama : att.quizId,
+        percobaan: att.attemptNum,
+        benar: att.benar,
+        total: att.total,
+        nilai: att.finalScore,
+        waktu: att.timestamp
+      };
+    })
+    .sort(function(a, b) {
+      return new Date(b.waktu) - new Date(a.waktu);
+    });
+}  
 function hapusNilaiManual(key, percobaan, waktu) {
   if (!confirm('Hapus data nilai ini?')) return;
 
