@@ -1105,12 +1105,14 @@ D. Pilihan D</div>
         <div class="card">
           <div class="card-title">Aturan Percobaan</div>
 
-          <div class="field-row-3">
+          <div class="field-row-3" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+            
             <div class="field">
               <label class="field-label">Maks. percobaan</label>
               <input type="number" class="num-input" id="cfg-max-att" value="10" min="1" max="20"
                 oninput="updatePenaltiPreview()">
             </div>
+
             <div class="field">
               <label class="field-label">Penalti / percobaan</label>
               <div style="display:flex; align-items:center; gap:5px;">
@@ -1120,10 +1122,25 @@ D. Pilihan D</div>
                 <span style="font-size:0.8rem; color:var(--text-muted);">poin</span>
               </div>
             </div>
+
             <div class="field">
               <label class="field-label">Maks. pelanggaran</label>
               <input type="number" class="num-input" id="cfg-max-viol" value="3" min="1" max="10">
             </div>
+
+            <!-- ✅ Tambahan DURASI -->
+            <div class="field">
+              <label class="field-label">Durasi kuis</label>
+              <select class="num-input" id="cfg-duration">
+                <option value="15">15 menit</option>
+                <option value="30">30 menit</option>
+                <option value="45" selected>45 menit</option>
+                <option value="60">60 menit</option>
+                <option value="90">90 menit</option>
+                <option value="120">120 menit</option>
+              </select>
+            </div>
+
           </div>
 
           <div class="alert alert-info" style="margin-top: 0.75rem;" id="penalti-preview">
@@ -1353,7 +1370,7 @@ D. Pilihan D</div>
 // ═══════════════════════════════════════════
 // KONSTANTA
 // ═══════════════════════════════════════════
-var APPS_SCRIPT_URL ='https://script.google.com/macros/s/AKfycbyebtFqMoMt-IIyYsVIrlUVxKGMmLJjAolDChKNikt_D0kAKxcbyOHaPVvsjxGcG4ShCw/exec';
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVrx5kL_wsyoGaG1kSOzf14xh5a5focgI2PurwX4HZ7NCfDmIvJsqmGf-8Dh6sALfjbg/exec';
 var STORAGE_KEY_QUIZ = 'admin_kuis_list';
 
 // Warna untuk setiap set soal
@@ -2009,6 +2026,7 @@ function publishKuis() {
   var att    = parseInt(document.getElementById('cfg-max-att').value) || 10;
   var pen    = parseInt(document.getElementById('cfg-penalty').value) || 5;
   var viol   = parseInt(document.getElementById('cfg-max-viol').value) || 3;
+  var duration = parseInt(document.getElementById('cfg-duration').value) || 45;
   var jumlah = parseInt(document.getElementById('cfg-jumlah-soal').value) || 30;
   var mode   = document.querySelector('input[name="mode-soal"]:checked').value;
 
@@ -2042,18 +2060,50 @@ function publishKuis() {
     jumlahSoal : Math.min(jumlah, pool.length),
     modeSoal   : mode,
     proporsi   : proporsi,
-    config     : { maxAtt: att, penalty: pen, maxViol: viol,
+    config     : { maxAtt: att, penalty: pen, maxViol: viol,durationMinutes: duration,
                    acak: document.getElementById('cfg-acak').checked,
                    acakPilihan: document.getElementById('cfg-acak-pilihan').checked,
                    fullscreen: document.getElementById('cfg-fs').checked,
                    copyPaste: document.getElementById('cfg-cp').checked },
     kunci      : wizard.kunci,
+    _pool       : pool,
     submissions: 0
   };
 
   // Simpan ke localStorage sementara
   quizList.push(quiz);
   saveQuizList();
+  fetch(APPS_SCRIPT_URL, {
+  method: 'POST',
+  body: JSON.stringify({
+    action: 'publishQuiz',
+    id: quiz.id,
+    nama: quiz.nama,
+    mk: quiz.mk,
+    status: quiz.status,
+    createdAt: quiz.createdAt,
+    pool: quiz._pool,
+    poolTotal: quiz.poolTotal,
+    jumlahSoal: quiz.jumlahSoal,
+    modeSoal: quiz.modeSoal,
+    proporsi: quiz.proporsi,
+    config: quiz.config,
+    kunci: quiz.kunci
+  })
+})
+.then(function(res) { return res.json(); })
+.then(function(data) {
+  if (data.status === 'ok') {
+    alert('Kuis berhasil dipublish ke Google Sheets!');
+    document.getElementById('link-text').textContent = 'kuis.html?id=' + quiz.id;
+    document.getElementById('link-card').style.display = 'block';
+  } else {
+    alert('Gagal publish: ' + data.message);
+  }
+})
+.catch(function(err) {
+  alert('Gagal konek ke Apps Script: ' + err);
+});
   updateDashboardStats();
 
   // Tampilkan link
@@ -2334,6 +2384,7 @@ function loadQuizList() {
 function saveQuizList() {
   try { localStorage.setItem(STORAGE_KEY_QUIZ, JSON.stringify(quizList)); } catch(e) {}
 }
+
 
 // ═══════════════════════════════════════════
 // INIT
