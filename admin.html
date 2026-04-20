@@ -2108,12 +2108,13 @@ function publishKuis() {
   updateDashboardStats();
 
   // Tampilkan link
-  var linkEl = document.getElementById('link-text');
-  linkEl.textContent = 'kuis.html?id=' + quizId;
-  document.getElementById('link-card').style.display = 'block';
+ var base = window.location.origin + window.location.pathname.replace('admin.html', '');
+ var fullLink = base + 'kuis.html?id=' + quizId;
+ var linkEl = document.getElementById('link-text');
+linkEl.textContent = fullLink;
+document.getElementById('link-card').style.display = 'block';
 
-  alert('Kuis "' + nama + '" berhasil disimpan!\n\nID Kuis: ' + quizId + '\nLink: kuis.html?id=' + quizId);
-}
+alert('Kuis "' + nama + '" berhasil disimpan!\n\nID Kuis: ' + quizId + '\nLink: ' + fullLink);
 
 function copyLink() {
   var txt = document.getElementById('link-text').textContent;
