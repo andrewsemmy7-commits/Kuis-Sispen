@@ -2177,6 +2177,7 @@ function updateDashboardStats() {
 }
 
 function copyQuizLink(quizId) {
+  var base = window.location.origin + window.location.pathname.replace('admin.html', '')
   var link = 'kuis.html?id=' + quizId;
   navigator.clipboard.writeText(link).then(function() {
     alert('Link disalin: ' + link);
