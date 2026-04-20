@@ -1349,11 +1349,12 @@ D. Pilihan D</div>
                 <th>Benar</th>
                 <th>Nilai Akhir</th>
                 <th>Waktu</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody id="nilai-tbody">
               <tr>
-                <td colspan="7" style="text-align:center; color:var(--text-dim); padding:2rem;">
+                <td colspan="8" style="text-align:center; color:var(--text-dim); padding:2rem;">
                   Belum ada data nilai
                 </td>
               </tr>
@@ -2177,8 +2178,8 @@ function updateDashboardStats() {
 }
 
 function copyQuizLink(quizId) {
-  var base = window.location.origin + window.location.pathname.replace('admin.html', '')
-  var link = 'kuis.html?id=' + quizId;
+  var base = window.location.origin + window.location.pathname.replace('admin.html', '');
+  var link = base + 'kuis.html?id=' + quizId;
   navigator.clipboard.writeText(link).then(function() {
     alert('Link disalin: ' + link);
   });
@@ -2231,7 +2232,8 @@ function renderNilai() {
       '<td style="font-family:var(--mono); text-align:center;">' + row.percobaan + '</td>' +
       '<td style="font-family:var(--mono); text-align:center;">' + row.benar + '/' + row.total + '</td>' +
       '<td><span class="score-chip ' + scoreClass + '">' + row.nilai + '</span></td>' +
-      '<td style="font-size:0.78rem; color:var(--text-muted);">' + new Date(row.waktu).toLocaleString('id-ID') + '</td>';
+      '<td style="font-size:0.78rem; color:var(--text-muted);">' + new Date(row.waktu).toLocaleString('id-ID') + '</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="hapusNilaiManual(\'' + row.key + '\', ' + row.percobaan + ', \'' + row.waktu + '\')">Hapus</button></td>';
     tbody.appendChild(tr);
   });
 }
@@ -2243,15 +2245,20 @@ function getNilaiData(filterQuizId) {
     var all = JSON.parse(raw);
     var result = [];
 
-    Object.keys(all).forEach(function(nim) {
-      var attempts = all[nim];
+    Object.keys(all).forEach(function(key) {
+      var parts = key.split('|');
+      var quizId = parts[0] || '';
+      var nim = parts.slice(1).join('|') || '';
+      var attempts = all[key] || [];
       attempts.forEach(function(att) {
-        if (filterQuizId && att.quizId !== filterQuizId) return;
-        var quiz = quizList.find(function(q) { return q.id === att.quizId; });
+        if (filterQuizId && quizId !== filterQuizId) return;
+        var quiz = quizList.find(function(q) { return q.id === quizId; });
         result.push({
-          nama    : att.nama || '-',
+          key     : key,
+          quizId  : quizId,
+          nama    : att.nama || att.name || '-',
           nim     : nim,
-          namaKuis: quiz ? quiz.nama : att.quizId || '-',
+          namaKuis: quiz ? quiz.nama : quizId || '-',
           percobaan: att.num,
           benar   : att.benar !== undefined ? att.benar : '?',
           total   : att.total || '-',
@@ -2264,7 +2271,30 @@ function getNilaiData(filterQuizId) {
     return result.sort(function(a,b) { return new Date(b.waktu) - new Date(a.waktu); });
   } catch(e) { return []; }
 }
+function hapusNilaiManual(key, percobaan, waktu) {
+  if (!confirm('Hapus data nilai ini?')) return;
 
+  try {
+    var raw = localStorage.getItem('kuis_ta3206_attempts');
+    if (!raw) return;
+
+    var all = JSON.parse(raw);
+    if (!all[key]) return;
+
+    all[key] = all[key].filter(function(att) {
+      return !(att.num === percobaan && att.timestamp === waktu);
+    });
+
+    if (all[key].length === 0) {
+      delete all[key];
+    }
+
+    localStorage.setItem('kuis_ta3206_attempts', JSON.stringify(all));
+    renderNilai();
+  } catch(e) {
+    alert('Gagal menghapus data.');
+  }
+}
 function exportCSV() {
   var data = getNilaiData(document.getElementById('filter-kuis').value);
   if (data.length === 0) { alert('Tidak ada data untuk diekspor.'); return; }
